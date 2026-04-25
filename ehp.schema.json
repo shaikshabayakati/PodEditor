@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://edit-flow-pro.local/schemas/ehp.schema.json",
+  "title": "EHP Project File",
+  "description": "Schema for .ehp edit handoff project files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "project_type",
+    "project_id",
+    "project_title",
+    "workflow_state",
+    "review_round",
+    "ownership",
+    "source_youtube_url",
+    "sections",
+    "instructions",
+    "dictionary",
+    "audit_log"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "examples": ["1.0.0"]
+    },
+    "project_type": {
+      "type": "string",
+      "description": "Project kind identifier.",
+      "const": "edit_handoff"
+    },
+    "project_id": {
+      "type": "string",
+      "description": "Unique project identifier.",
+      "format": "uuid"
+    },
+    "project_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workflow_state": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "sent_to_editor",
+        "editor_in_progress",
+        "revision_requested",
+        "approved_complete"
+      ]
+    },
+    "review_round": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewer_id", "reviewer_name"],
+      "properties": {
+        "reviewer_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewer_name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "source_youtube_url": {
+      "type": "string"
+    },
+    "edited_youtube_url": {
+      "type": "string"
+    },
+    "video_duration": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Video duration in seconds."
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "instructions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/instruction"
+      }
+    },
+    "dictionary": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "audit_log": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/auditEntry"
+      }
+    }
+  },
+  "$defs": {
+    "instructionType": {
+      "type": "string",
+      "enum": [
+        "delete",
+        "reorder",
+        "chapter",
+        "text",
+        "big_text",
+        "small_text",
+        "chapter_heading",
+        "single_screen",
+        "double_screen",
+        "change",
+        "image",
+        "footage",
+        "note"
+      ]
+    },
+    "clipType": {
+      "type": "string",
+      "enum": ["reel_candidate", "teaser_candidate", "interesting_moment"]
+    },
+    "executionStatus": {
+      "type": "string",
+      "enum": ["todo", "in_progress", "done", "blocked"]
+    },
+    "reviewStatus": {
+      "type": "string",
+      "enum": ["not_reviewed", "approved", "needs_revision"]
+    },
+    "userRole": {
+      "type": "string",
+      "enum": ["reviewer", "editor"]
+    },
+    "instruction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "start_time",
+        "input_text",
+        "execution_status",
+        "review_status",
+        "round",
+        "created_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "type": {
+          "$ref": "#/$defs/instructionType"
+        },
+        "start_time": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Start timestamp in seconds."
+        },
+        "end_time": {
+          "type": "number",
+          "minimum": 0,
+          "description": "End timestamp in seconds."
+        },
+        "destination_start_time": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Destination timestamp in seconds for reorder instructions."
+        },
+        "input_text": {
+          "type": "string"
+        },
+        "clip_type": {
+          "$ref": "#/$defs/clipType"
+        },
+        "clip_note": {
+          "type": "string"
+        },
+        "section": {
+          "type": "string"
+        },
+        "execution_status": {
+          "$ref": "#/$defs/executionStatus"
+        },
+        "review_status": {
+          "$ref": "#/$defs/reviewStatus"
+        },
+        "editor_note": {
+          "type": "string"
+        },
+        "clarification_flag": {
+          "type": "boolean"
+        },
+        "actual_implemented_start": {
+          "type": "number",
+          "minimum": 0
+        },
+        "actual_implemented_end": {
+          "type": "number",
+          "minimum": 0
+        },
+        "round": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["delete", "reorder", "chapter"]
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["end_time"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reorder"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["destination_start_time"]
+          }
+        }
+      ]
+    },
+    "auditEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestamp", "role", "action"],
+      "properties": {
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "role": {
+          "$ref": "#/$defs/userRole"
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entry_id": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
