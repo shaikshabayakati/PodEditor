@@ -43,6 +43,7 @@ declare global {
 function loadYouTubeIframeApi(): Promise<void> {
   if (window.YT?.Player) {
     return Promise.resolve();
+    
   }
 
   if (window.__ytApiReadyPromise) {
@@ -218,6 +219,32 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
           notesInput.focus();
           e.preventDefault();
         }
+      } else if (e.key.toLowerCase() === 'j' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        const newTime = Math.max(0, (currentVideoTime || playerRef.current?.getCurrentTime() || 0) - 5);
+        seekVideoTo(newTime, false);
+      } else if (e.key.toLowerCase() === 'k' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        if (playerRef.current) {
+          const state = playerRef.current.getPlayerState();
+          if (state === 1 || state === 3) {
+            playerRef.current.pauseVideo();
+          } else {
+            playerRef.current.playVideo();
+          }
+        }
+      } else if (e.key.toLowerCase() === 'l' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        const newTime = (currentVideoTime || playerRef.current?.getCurrentTime() || 0) + 5;
+        seekVideoTo(newTime, false);
+      } else if (e.shiftKey && e.key === 'ArrowRight' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        const nextRate = Math.min(2, videoPlaybackRate + 0.5);
+        setVideoPlaybackRate(nextRate);
+      } else if (e.shiftKey && e.key === 'ArrowLeft' && !isTypingTarget(e.target)) {
+        e.preventDefault();
+        const prevRate = Math.max(0.5, videoPlaybackRate - 0.5);
+        setVideoPlaybackRate(prevRate);
       } else if (e.key === 'ArrowRight' && !isTypingTarget(e.target)) {
         e.preventDefault();
         const newTime = (currentVideoTime || playerRef.current?.getCurrentTime() || 0) + 10;
@@ -231,7 +258,7 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [seekVideoTo, currentVideoTime]);
+  }, [seekVideoTo, currentVideoTime, videoPlaybackRate, setVideoPlaybackRate]);
 
   if (!videoId) {
     return (

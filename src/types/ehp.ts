@@ -7,6 +7,8 @@ export type InstructionType =
 
 export type ClipType = 'reel_candidate' | 'teaser_candidate' | 'interesting_moment';
 
+export const INSTRUCTION_TYPES: InstructionType[] = ['note', 'delete', 'image', 'text', 'chapter'];
+
 export type ExecutionStatus = 'todo' | 'in_progress' | 'done' | 'blocked';
 export type ReviewStatus = 'not_reviewed' | 'approved' | 'needs_revision';
 
