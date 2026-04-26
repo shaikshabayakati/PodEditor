@@ -64,8 +64,9 @@ function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.hasAttribute('data-notes-input')) return true;
   if (target.hasAttribute('data-text-edit')) return true;
+  if (target.hasAttribute('data-timeline-input')) return false;
   const tag = target.tagName.toLowerCase();
-  return tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button' || target.isContentEditable;
+  return tag === 'input' || tag === 'textarea' || target.isContentEditable;
 }
 
 function extractYouTubeId(url: string): string | null {
@@ -128,6 +129,16 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
         },
         events: {
           onReady: () => {
+            const tryPlay = () => {
+              if (playerRef.current) {
+                playerRef.current.setVolume(100);
+                playerRef.current.unMute();
+                playerRef.current.playVideo();
+              }
+            };
+            tryPlay();
+            setTimeout(tryPlay, 500);
+            setTimeout(tryPlay, 1500);
             timer = setInterval(() => {
               const current = playerRef.current?.getCurrentTime() ?? 0;
               setCurrentVideoTime(current);
@@ -138,6 +149,12 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
                 setVideoDuration(duration);
               }
             }, 200);
+          },
+          onStateChange: (event: { data: number }) => {
+            if (event.data === window.YT?.PlayerState?.PLAYING && playerRef.current) {
+              playerRef.current.setVolume(100);
+              playerRef.current.unMute();
+            }
           },
         },
       });
@@ -209,9 +226,6 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
         e.preventDefault();
         const newTime = Math.max(0, (currentVideoTime || playerRef.current?.getCurrentTime() || 0) - 10);
         seekVideoTo(newTime, false);
-      } else if (e.key.toLowerCase() === 's' && !isTypingTarget(e.target)) {
-        const synthEvent = new CustomEvent('app:s-shortcut');
-        window.dispatchEvent(synthEvent);
       }
     };
 
@@ -228,7 +242,7 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
   }
 
   return (
-    <div className={`relative overflow-hidden rounded-lg border border-border group ${className}`}>
+    <div className={`relative overflow-hidden rounded-lg border border-border group flex ${className}`}>
       <div ref={playerHostRef} className="absolute inset-0 h-full w-full" />
       <div 
         className="absolute top-0 left-0 right-0 bottom-[90px] z-10 cursor-pointer"

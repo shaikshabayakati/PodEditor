@@ -6,7 +6,7 @@ import TopBar from './TopBar';
 import { Input } from '@/components/ui/input';
 import { Video, Settings, CheckCircle, Clock, PlayCircle, XCircle, Link2 } from 'lucide-react';
 import { formatTime } from '@/types/ehp';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import type { ExecutionStatus } from '@/types/ehp';
 
 const STATUS_CONFIG: Record<ExecutionStatus, { label: string; icon: React.ReactNode; color: string }> = {
@@ -19,10 +19,35 @@ const STATUS_CONFIG: Record<ExecutionStatus, { label: string; icon: React.ReactN
 export default function Workspace() {
   const { project, activeRole, currentVideoTime, seekVideoTo, setEditedUrl, videoPlaybackRate, setVideoPlaybackRate } = useProjectStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(55);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
 
   const isReviewer = activeRole === 'reviewer';
   const isEditor = activeRole === 'editor';
   const showEditorPanel = isEditor && project.workflow_state !== 'draft';
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+      setLeftPanelWidth(Math.min(90, Math.max(30, newWidth)));
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   const videoUrl = isEditor
     ? project.edited_youtube_url || project.source_youtube_url
@@ -46,43 +71,40 @@ export default function Workspace() {
     <div className="flex flex-col h-screen bg-background">
       <TopBar />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left panel (stacked) */}
-        <div className="w-[55%] flex flex-col border-r border-border">
-          {/* Timeline */}
-          <div className="px-4 pt-3 pb-2">
-            <div className="rounded-lg border border-border bg-surface px-3 py-2">
-              <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex-1 flex overflow-hidden" ref={containerRef}>
+        {/* Left panel */}
+        <div style={{ width: `${leftPanelWidth}%` }} className="flex flex-col border-r border-border">
+          {/* Timeline - compact */}
+          <div className="px-3 pt-2 pb-1 flex-shrink-0">
+            <div className="rounded border border-border bg-surface px-2 py-1">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                 <span>{formatTime(Math.floor(clampedCurrent))}</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <span className="text-primary font-medium">{videoPlaybackRate}x</span>
                   <button
                     onClick={() => setShowSettings(!showSettings)}
-                    className="p-1 hover:bg-accent rounded"
+                    className="p-0.5 hover:bg-accent rounded"
                   >
-                    <Settings className="w-3.5 h-3.5" />
+                    <Settings className="w-3 h-3" />
                   </button>
                 </div>
                 <span>{formatTime(Math.floor(videoDuration))}</span>
               </div>
               {showSettings && (
-                <div className="mb-2 space-y-2">
-                  <div className="flex gap-1 flex-wrap">
-                    {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2].map((rate) => (
-                      <button
-                        key={rate}
-                        onClick={() => setVideoPlaybackRate(rate)}
-                        className={`px-2 py-1 text-xs rounded ${
-                          videoPlaybackRate === rate
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-accent hover:bg-accent/80'
-                        }`}
-                      >
-                        {rate}x
-                      </button>
-                    ))}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">Speed controls video playback rate. YouTube auto-adjusts quality.</div>
+                <div className="mt-1 flex gap-1">
+                  {[0.5, 1, 1.5, 2].map((rate) => (
+                    <button
+                      key={rate}
+                      onClick={() => setVideoPlaybackRate(rate)}
+                      className={`px-1.5 py-0.5 text-[10px] rounded ${
+                        videoPlaybackRate === rate
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-accent hover:bg-accent/80'
+                      }`}
+                    >
+                      {rate}x
+                    </button>
+                  ))}
                 </div>
               )}
               <input
@@ -93,39 +115,40 @@ export default function Workspace() {
                 value={videoDuration > 0 ? clampedCurrent : 0}
                 onChange={(e) => seekVideoTo(Number(e.target.value), false)}
                 disabled={videoDuration <= 0}
+                data-timeline-input
                 className="h-1 w-full cursor-pointer accent-primary disabled:cursor-not-allowed disabled:opacity-40"
                 aria-label="Video timeline"
               />
             </div>
           </div>
 
-          {/* Video player */}
-          <div className="px-4 pb-3 flex-shrink-0">
-            <YouTubePlayer url={videoUrl} className="aspect-video" />
+          {/* Video player - flex to fill available space */}
+          <div className="flex-1 px-3 min-h-0">
+            <YouTubePlayer url={videoUrl} className="h-full w-full" />
           </div>
 
           {/* Bottom: Composer (reviewer) or editor panel */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="px-4 py-3 flex-shrink-0">
             {isReviewer && <InstructionComposer />}
             {showEditorPanel && (
-              <div className="space-y-3">
+<div className="space-y-2">
                 {/* Progress Overview */}
-                <div className="bg-card border border-border rounded-lg p-4">
+                <div className="bg-card border border-border rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-semibold text-foreground">Execution Progress</h3>
                     <span className="text-sm font-medium text-primary">{progressPercent}%</span>
                   </div>
-                  <div className="h-2 bg-surface rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-surface rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-success transition-all duration-300"
                       style={{ width: `${progressPercent}%` }}
                     />
                   </div>
-                  <div className="flex items-center gap-3 mt-3">
+                  <div className="flex items-center gap-2 mt-2 text-xs">
                     {(Object.keys(STATUS_CONFIG) as ExecutionStatus[]).map((status) => (
-                      <div key={status} className="flex items-center gap-1.5">
+                      <div key={status} className="flex items-center gap-1">
                         <span className={STATUS_CONFIG[status].color}>{STATUS_CONFIG[status].icon}</span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-muted-foreground">
                           {STATUS_CONFIG[status].label}: <span className="font-medium text-foreground">{editorStats[status]}</span>
                         </span>
                       </div>
@@ -134,37 +157,33 @@ export default function Workspace() {
                 </div>
 
                 {/* Revised Video Link */}
-                <div className="bg-card border border-border rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-3">
+                <div className="bg-card border border-border rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
                     <Link2 className="w-4 h-4 text-primary" />
                     <h3 className="text-sm font-semibold text-foreground">Revised Video</h3>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Paste the final revised YouTube URL when editing is complete.
-                  </p>
                   <Input
                     value={project.edited_youtube_url || ''}
                     onChange={(e) => setEditedUrl(e.target.value)}
-                    placeholder="Paste revised YouTube URL..."
-                    className="bg-surface border-border text-sm h-9"
+                    placeholder="Paste revised YouTube URL when complete"
+                    className="bg-surface border-border text-sm h-8"
                   />
-                </div>
-
-                {/* Quick Actions */}
-                <div className="bg-card border border-border rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-foreground mb-3">Instructions Guide</h3>
-                  <div className="text-xs text-muted-foreground space-y-2">
-                    <p>• Click on any instruction to update its status</p>
-                    <p>• Add actual timestamps where edits were applied</p>
-                    <p>• Use editor notes to provide feedback</p>
-                    <p>• Flag unclear instructions as blocked</p>
-                  </div>
                 </div>
               </div>
             )}
-            
           </div>
         </div>
+
+        {/* Resizer handle */}
+        <div
+          className="w-1 cursor-col-resize hover:bg-primary/50 transition-colors flex-shrink-0"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            isDragging.current = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+          }}
+        />
 
         {/* Right panel: instruction list */}
         <div className="flex-1 flex flex-col">

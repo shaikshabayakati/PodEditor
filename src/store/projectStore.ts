@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import type { EHPProject, Instruction, UserRole, WorkflowState, AuditEntry } from '@/types/ehp';
+import type { EHPProject, Instruction, UserRole, WorkflowState, AuditEntry, Tab } from '@/types/ehp';
 import { createEmptyProject } from '@/types/ehp';
 
 const STORAGE_KEY = 'ehp-project-store';
@@ -16,8 +16,14 @@ function normalizeImportedProject(value: unknown): EHPProject | null {
   const schemaVersion = typeof value.schema_version === 'string' ? value.schema_version : '';
   const projectId = typeof value.project_id === 'string' ? value.project_id : '';
 
-  // Keep the same minimum import guard, but normalize all optional/missing fields.
   if (!schemaVersion || !projectId) return null;
+
+  const tabs: Tab[] = Array.isArray(value.tabs)
+    ? (value.tabs as Tab[]).filter((t): t is Tab => isRecord(t) && typeof t.id === 'string' && typeof t.name === 'string')
+    : fallback.tabs;
+  const activeTabId = typeof value.active_tab_id === 'string' && tabs.some(t => t.id === value.active_tab_id)
+    ? value.active_tab_id
+    : tabs[0]?.id ?? fallback.active_tab_id;
 
   return {
     ...fallback,
@@ -59,6 +65,8 @@ function normalizeImportedProject(value: unknown): EHPProject | null {
     instructions: Array.isArray(value.instructions)
       ? (value.instructions as Instruction[])
       : fallback.instructions,
+    tabs,
+    active_tab_id: activeTabId,
     dictionary: Array.isArray(value.dictionary)
       ? value.dictionary.filter((item): item is string => typeof item === 'string')
       : fallback.dictionary,
@@ -93,6 +101,13 @@ interface ProjectStore {
   addInstruction: (instruction: Instruction) => void;
   updateInstruction: (id: string, updates: Partial<Instruction>) => void;
   removeInstruction: (id: string) => void;
+  addTab: (name: string) => void;
+  renameTab: (id: string, name: string) => void;
+  removeTab: (id: string) => void;
+  setActiveTab: (id: string) => void;
+  addInstructionToTab: (instructionId: string, tabId?: string) => void;
+  removeInstructionFromTab: (instructionId: string, tabId?: string) => void;
+  getActiveTabInstructions: () => Instruction[];
   setWorkflowState: (state: WorkflowState) => void;
   addAuditEntry: (entry: Omit<AuditEntry, 'timestamp'>) => void;
   addDictionaryPhrase: (phrase: string) => void;
@@ -133,7 +148,15 @@ export const useProjectStore = create<ProjectStore>()(
         set((s) => ({ project: { ...s.project, video_duration: d } })),
       addInstruction: (instruction) =>
         set((s) => {
-          const p = { ...s.project, instructions: [...s.project.instructions, instruction] };
+          const p = {
+            ...s.project,
+            instructions: [...s.project.instructions, instruction],
+            tabs: s.project.tabs.map((t) =>
+              t.id === s.project.active_tab_id
+                ? { ...t, instruction_ids: [...t.instruction_ids, instruction.id] }
+                : t
+            ),
+          };
           return { project: p };
         }),
       updateInstruction: (id, updates) =>
@@ -150,8 +173,69 @@ export const useProjectStore = create<ProjectStore>()(
           project: {
             ...s.project,
             instructions: s.project.instructions.filter((i) => i.id !== id),
+            tabs: s.project.tabs.map((t) => ({
+              ...t,
+              instruction_ids: t.instruction_ids.filter((iid) => iid !== id),
+            })),
           },
         })),
+      addTab: (name) =>
+        set((s) => {
+          const newTab: Tab = { id: crypto.randomUUID(), name, instruction_ids: [] };
+          return { project: { ...s.project, tabs: [...s.project.tabs, newTab], active_tab_id: newTab.id } };
+        }),
+      renameTab: (id, name) =>
+        set((s) => ({
+          project: {
+            ...s.project,
+            tabs: s.project.tabs.map((t) => (t.id === id ? { ...t, name } : t)),
+          },
+        })),
+      removeTab: (id) =>
+        set((s) => {
+          if (s.project.tabs.length <= 1) return s;
+          const newTabs = s.project.tabs.filter((t) => t.id !== id);
+          const newActiveId = s.project.active_tab_id === id ? newTabs[0].id : s.project.active_tab_id;
+          return { project: { ...s.project, tabs: newTabs, active_tab_id: newActiveId } };
+        }),
+      setActiveTab: (id) =>
+        set((s) => ({ project: { ...s.project, active_tab_id: id } })),
+      addInstructionToTab: (instructionId, tabId) =>
+        set((s) => {
+          const targetTabId = tabId ?? s.project.active_tab_id;
+          return {
+            project: {
+              ...s.project,
+              tabs: s.project.tabs.map((t) =>
+                t.id === targetTabId && !t.instruction_ids.includes(instructionId)
+                  ? { ...t, instruction_ids: [...t.instruction_ids, instructionId] }
+                  : t
+              ),
+            },
+          };
+        }),
+      removeInstructionFromTab: (instructionId, tabId) =>
+        set((s) => {
+          const targetTabId = tabId ?? s.project.active_tab_id;
+          return {
+            project: {
+              ...s.project,
+              tabs: s.project.tabs.map((t) =>
+                t.id === targetTabId
+                  ? { ...t, instruction_ids: t.instruction_ids.filter((id) => id !== instructionId) }
+                  : t
+              ),
+            },
+          };
+        }),
+      getActiveTabInstructions: () => {
+        const s = get();
+        const activeTab = s.project.tabs.find((t) => t.id === s.project.active_tab_id);
+        if (!activeTab) return s.project.instructions;
+        return activeTab.instruction_ids
+          .map((id) => s.project.instructions.find((i) => i.id === id))
+          .filter((i): i is Instruction => i !== undefined);
+      },
       setWorkflowState: (state) =>
         set((s) => ({ project: { ...s.project, workflow_state: state } })),
       addAuditEntry: (entry) =>

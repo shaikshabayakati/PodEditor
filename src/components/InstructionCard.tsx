@@ -21,9 +21,10 @@ const REVIEW_COLORS: Record<ReviewStatus, string> = {
 
 const TYPE_COLORS: Record<string, string> = {
   delete: 'border-l-blocked',
-  reorder: 'border-l-info',
-  chapter: 'border-l-primary',
+  image: 'border-l-warning',
+  text: 'border-l-info',
   note: 'border-l-muted-foreground',
+  chapter: 'border-l-primary',
 };
 
 interface InstructionCardProps {
@@ -116,8 +117,149 @@ export default function InstructionCard({ instruction: inst }: InstructionCardPr
     setIsReviewerEditing(false);
   };
 
+const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[END]');
+  const isChapterEnd = inst.type === 'chapter' && inst.input_text.includes('[END]');
+  const chapterLabel = inst.input_text.replace('[END]', '').trim() || 'Section';
+  const [isEditingChapter, setIsEditingChapter] = useState(false);
+  const [editChapterText, setEditChapterText] = useState(chapterLabel);
+
+  const saveChapterEdit = () => {
+    updateInstruction(inst.id, { input_text: editChapterText });
+    setIsEditingChapter(false);
+  };
+
+  if (isChapterStart) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="px-3 py-2 rounded-lg border border-primary/30 bg-primary/10"
+      >
+        {isEditingChapter && isReviewer ? (
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-primary text-primary-foreground">
+              Chapter
+            </span>
+            <Input
+              value={editChapterText}
+              onChange={(e) => setEditChapterText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveChapterEdit();
+                if (e.key === 'Escape') setIsEditingChapter(false);
+              }}
+              className="flex-1 h-7 text-sm"
+              autoFocus
+            />
+            <button
+              onClick={saveChapterEdit}
+              className="p-1 hover:bg-primary/20 rounded text-primary"
+            >
+              <Check className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => setIsEditingChapter(false)}
+              className="p-1 hover:bg-destructive/20 rounded text-destructive"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-primary text-primary-foreground">
+              Chapter
+            </span>
+            <p 
+              className="text-sm font-medium text-foreground truncate cursor-pointer hover:underline"
+              onClick={() => isReviewer && setIsEditingChapter(true)}
+            >{chapterLabel}</p>
+            <span className="text-xs font-mono text-muted-foreground">[{formatTime(inst.start_time)}]</span>
+            {isReviewer && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeInstruction(inst.id);
+                }}
+                className="ml-auto p-1 hover:bg-destructive/20 rounded text-destructive"
+                title="Delete"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
+  if (isChapterEnd) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, x: -20 }}
+        className="px-3 py-2 rounded-lg border border-border bg-surface"
+      >
+        {isEditingChapter && isReviewer ? (
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-muted text-muted-foreground">
+              Chapter End
+            </span>
+            <Input
+              value={editChapterText}
+              onChange={(e) => setEditChapterText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveChapterEdit();
+                if (e.key === 'Escape') setIsEditingChapter(false);
+              }}
+              className="flex-1 h-7 text-sm"
+              autoFocus
+            />
+            <button
+              onClick={saveChapterEdit}
+              className="p-1 hover:bg-primary/20 rounded text-primary"
+            >
+              <Check className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => setIsEditingChapter(false)}
+              className="p-1 hover:bg-destructive/20 rounded text-destructive"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-muted text-muted-foreground">
+              Chapter End
+            </span>
+            <p 
+              className="text-sm truncate cursor-pointer hover:underline"
+              onClick={() => isReviewer && setIsEditingChapter(true)}
+            >{chapterLabel}</p>
+            <span className="text-xs font-mono text-muted-foreground">[{formatTime(inst.start_time)}]</span>
+            {isReviewer && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeInstruction(inst.id);
+                }}
+                className="ml-auto p-1 hover:bg-destructive/20 rounded text-destructive"
+                title="Delete"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
+      </motion.div>
+    );
+  }
+
   return (
-    <motion.div
+        <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
@@ -382,7 +524,7 @@ export default function InstructionCard({ instruction: inst }: InstructionCardPr
                 </>
               )}
 
-              {inst.editor_note && !isEditor && (
+{inst.editor_note && !isEditor && (
                 <p className="text-xs text-muted-foreground mt-1">
                   <span className="text-[10px] uppercase tracking-wider">Editor: </span>{inst.editor_note}
                 </p>

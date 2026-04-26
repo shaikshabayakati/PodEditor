@@ -3,24 +3,31 @@ import { useProjectStore } from '@/store/projectStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Instruction, InstructionType } from '@/types/ehp';
-import { formatTime, parseTime } from '@/types/ehp';
-import { Plus, Clock } from 'lucide-react';
+import { formatTime, parseTime, INSTRUCTION_LABELS } from '@/types/ehp';
+import { Plus } from 'lucide-react';
+
+const TYPE_OPTIONS: InstructionType[] = [
+  'delete', 'image', 'text', 'note', 'chapter'
+];
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.hasAttribute('data-notes-input')) return true;
   if (target.hasAttribute('data-text-edit')) return true;
+  if (target.hasAttribute('data-timeline-input')) return false;
   const tag = target.tagName.toLowerCase();
-  if (tag === 'input') return false;
-  return target.isContentEditable || tag === 'textarea' || tag === 'select' || tag === 'button';
+  return tag === 'input' || tag === 'textarea' || target.isContentEditable;
 }
 
 export default function InstructionComposer() {
   const { addInstruction, project, addAuditEntry, activeRole, currentVideoTime } = useProjectStore();
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [type, setType] = useState<InstructionType>('note');
   const [inputText, setInputText] = useState('');
+  const [typeOpen, setTypeOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const typeSelectRef = useRef<HTMLButtonElement>(null);
   const isReviewer = activeRole === 'reviewer';
 
   useEffect(() => {
@@ -30,121 +37,126 @@ export default function InstructionComposer() {
 
       if (event.key.toLowerCase() === 'p') {
         event.preventDefault();
-
         const stamp = formatTime(Math.max(0, Math.floor(currentVideoTime)));
         if (!startTime || endTime) {
           setStartTime(stamp);
           setEndTime('');
           return;
         }
-
         setEndTime(stamp);
+        return;
+      }
+
+      if (event.key.toLowerCase() === 't') {
+        event.preventDefault();
+        setTypeOpen(true);
+        return;
+      }
+
+      if (typeOpen) {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          const currentIdx = TYPE_OPTIONS.indexOf(type);
+          const nextIdx = (currentIdx + 1) % TYPE_OPTIONS.length;
+          setType(TYPE_OPTIONS[nextIdx]);
+          return;
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          const currentIdx = TYPE_OPTIONS.indexOf(type);
+          const prevIdx = (currentIdx - 1 + TYPE_OPTIONS.length) % TYPE_OPTIONS.length;
+          setType(TYPE_OPTIONS[prevIdx]);
+          return;
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          setTypeOpen(false);
+          return;
+        }
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setTypeOpen(false);
+          return;
+        }
+        return;
+      }
+
+      if (event.key.toLowerCase() === 's') {
+        if (!startTime.trim()) return;
+        const st = parseTime(startTime.trim());
+        if (st === null) return;
+        event.preventDefault();
+
+        const et = endTime.trim() ? parseTime(endTime.trim()) ?? undefined : undefined;
+        let finalText = inputText.trim();
+        let finalType = type;
+
+        if (type === 'chapter' && finalText.toLowerCase().includes('end')) {
+          finalType = 'chapter';
+          finalText = `[END] ${finalText.replace(/end/i, '').trim()}` || 'Section';
+        } else if (type === 'chapter') {
+          finalText = finalText || 'Section';
+        }
+
+        const instruction: Instruction = {
+          id: crypto.randomUUID(),
+          type: finalType,
+          start_time: st,
+          end_time: et,
+          input_text: finalText,
+          execution_status: 'todo',
+          review_status: 'not_reviewed',
+          round: project.review_round,
+          created_at: new Date().toISOString(),
+        };
+
+        addInstruction(instruction);
+        addAuditEntry({ role: 'reviewer', action: 'instruction_added', entry_id: instruction.id });
+
+        setStartTime('');
+        setEndTime('');
+        setInputText('');
         return;
       }
     };
 
-    const handleSShortcut = () => {
-      if (!startTime.trim() || !inputText.trim()) return;
-      const st = parseTime(startTime.trim());
-      if (!st) return;
-
-      const et = endTime.trim() ? parseTime(endTime.trim()) ?? undefined : undefined;
-      let noteText = inputText.trim();
-
-      let type: InstructionType = 'note';
-      const words = noteText.split(/\s+/);
-      const cmd = words[0]?.toLowerCase();
-      
-      const shorthands: Record<string, InstructionType> = {
-        'd': 'delete',
-        'i': 'image',
-        't': 'text',
-        'b': 'big_text',
-        's': 'small_text',
-        'c': 'chapter',
-        'ch': 'change',
-        'h': 'chapter_heading',
-        'f': 'footage',
-        'r': 'reorder',
-        'n': 'note'
-      };
-
-      if (cmd && shorthands[cmd]) {
-        type = shorthands[cmd];
-        noteText = noteText.substring(cmd.length).trim() || type.charAt(0).toUpperCase() + type.slice(1);
-      }
-
-      const instruction: any = {
-        id: crypto.randomUUID(),
-        type,
-        start_time: st,
-        end_time: et,
-        input_text: noteText,
-        execution_status: 'todo',
-        review_status: 'not_reviewed',
-        round: project.review_round,
-        created_at: new Date().toISOString(),
-      };
-
-      addInstruction(instruction);
-      addAuditEntry({ role: 'reviewer', action: 'instruction_added', entry_id: instruction.id });
-
-      setStartTime('');
-      setEndTime('');
-      setInputText('');
-    };
-
-    window.addEventListener('app:s-shortcut', handleSShortcut);
     window.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener('app:s-shortcut', handleSShortcut);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, [currentVideoTime, endTime, isReviewer, startTime, inputText, project.review_round, addInstruction, addAuditEntry]);
+  }, [currentVideoTime, endTime, isReviewer, startTime, inputText, project.review_round, addInstruction, addAuditEntry, type, typeOpen]);
 
   const canSubmit = () => {
     if (!startTime.trim()) return false;
     const st = parseTime(startTime.trim());
     if (st === null) return false;
     if (endTime.trim() && parseTime(endTime.trim()) === null) return false;
-    return inputText.trim().length > 0;
+    return true;
   };
 
   const handleSubmit = () => {
     if (!canSubmit()) return;
     const st = parseTime(startTime.trim())!;
     const et = endTime.trim() ? parseTime(endTime.trim()) ?? undefined : undefined;
-    let noteText = inputText.trim();
 
-    let type: InstructionType = 'note';
-    const words = noteText.split(/\s+/);
-    const cmd = words[0]?.toLowerCase();
-    
-    const shorthands: Record<string, InstructionType> = {
-      'd': 'delete',
-      'i': 'image',
-      't': 'text',
-      'b': 'big_text',
-      's': 'small_text',
-      'c': 'chapter',
-      'ch': 'change',
-      'h': 'chapter_heading',
-      'f': 'footage',
-      'r': 'reorder',
-      'n': 'note'
-    };
+    let finalType = type;
+    let finalText = inputText.trim();
 
-    if (cmd && shorthands[cmd]) {
-      type = shorthands[cmd];
-      noteText = noteText.substring(cmd.length).trim() || type.charAt(0).toUpperCase() + type.slice(1);
+    if (type === 'chapter') {
+      if (finalText.toLowerCase().includes('end')) {
+        finalType = 'chapter';
+        finalText = `[END] ${finalText.replace(/end/i, '').trim()}` || 'Section';
+      } else {
+        finalText = finalText || 'Section';
+      }
     }
 
     const instruction: Instruction = {
       id: crypto.randomUUID(),
-      type,
+      type: finalType,
       start_time: st,
       end_time: et,
-      input_text: noteText,
+      input_text: finalText,
       execution_status: 'todo',
       review_status: 'not_reviewed',
       round: project.review_round,
@@ -154,69 +166,88 @@ export default function InstructionComposer() {
     addInstruction(instruction);
     addAuditEntry({ role: 'reviewer', action: 'instruction_added', entry_id: instruction.id });
 
-    // Reset
     setStartTime('');
     setEndTime('');
     setInputText('');
     inputRef.current?.focus();
   };
 
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLElement).blur();
+    }
+  };
+
+  const getTypeLabel = (t: InstructionType): string => {
+    switch (t) {
+      case 'chapter': return 'Chapter';
+      default: return INSTRUCTION_LABELS[t];
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-3 p-4 bg-card rounded-lg border border-border">
-      {/* Time inputs */}
+    <div className="flex flex-col gap-2 p-4 bg-card rounded-lg border border-border">
+      {/* Start, End, Type - all in one row */}
       <div className="flex gap-2">
-        <div className="flex-1">
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">
-            <Clock className="w-3 h-3 inline mr-1" />Start
-          </label>
+        <div className="flex-1 min-w-0">
           <Input
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            placeholder="0:00"
-            className="bg-surface border-border font-mono text-sm h-8"
+            onKeyDown={handleInputKeyDown}
+            placeholder="Start"
+            className="bg-surface border-border font-mono text-sm h-10 w-full"
           />
         </div>
-        <div className="flex-1">
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 block">
-            End (opt)
-          </label>
+        <div className="flex-1 min-w-0">
           <Input
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            placeholder="0:00"
-            className="bg-surface border-border font-mono text-sm h-8"
+            onKeyDown={handleInputKeyDown}
+            placeholder="End"
+            className="bg-surface border-border font-mono text-sm h-10 w-full"
           />
+        </div>
+        <div className="flex-1 min-w-0">
+          {typeOpen ? (
+            <div className="w-full bg-surface border border-primary rounded px-2 text-sm text-foreground h-10 flex items-center justify-between">
+              <span>{getTypeLabel(type)}</span>
+              <span className="text-[10px] text-muted-foreground">↑↓</span>
+            </div>
+          ) : (
+            <button
+              ref={typeSelectRef}
+              type="button"
+              data-type-select
+              onClick={() => setTypeOpen(true)}
+              className="w-full bg-surface border border-border rounded px-2 text-sm text-foreground h-10 flex items-center justify-between hover:border-primary/50"
+            >
+              <span>{getTypeLabel(type)}</span>
+              <span className="text-[10px] text-muted-foreground">T</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Notes input */}
+      {/* Notes input - plain text box, no shortcuts */}
       <Input
         ref={inputRef}
         data-notes-input
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            (e.target as HTMLInputElement).blur();
-            return;
-          }
-        }}
-        placeholder="Add note..."
-        className="bg-surface border-border text-sm h-9"
+        onKeyDown={handleInputKeyDown}
+        placeholder="Enter instruction notes..."
+        className="bg-surface border-border text-sm h-10"
       />
-
-      <p className="text-[11px] text-muted-foreground">P start/end, S save, Enter exit, N focus, ←→ seek, Space play/pause.</p>
 
       {/* Submit */}
       <Button
         onClick={handleSubmit}
         disabled={!canSubmit()}
-        className="w-full gap-2"
+        className="w-full gap-1"
         size="sm"
       >
-        <Plus className="w-4 h-4" />
-        Add Instruction
+        <Plus className="w-3.5 h-3.5" />
+        Add
       </Button>
     </div>
   );

@@ -1,28 +1,26 @@
 import { useProjectStore } from '@/store/projectStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Upload, Send, Eye, Pencil, Check } from 'lucide-react';
-import type { UserRole, WorkflowState } from '@/types/ehp';
+import { Download, Upload, Eye, Pencil } from 'lucide-react';
+import type { UserRole } from '@/types/ehp';
 import { useRef, useEffect } from 'react';
 import { toast } from 'sonner';
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || target.isContentEditable;
+}
 
 const ROLE_LABELS: Record<UserRole, { label: string; icon: React.ReactNode }> = {
   reviewer: { label: 'Reviewer', icon: <Pencil className="w-3.5 h-3.5" /> },
   editor: { label: 'Editor', icon: <Eye className="w-3.5 h-3.5" /> },
 };
 
-const STATE_LABELS: Record<WorkflowState, string> = {
-  draft: 'Draft',
-  sent_to_editor: 'Sent to Editor',
-  editor_in_progress: 'Editor Working',
-  revision_requested: 'Revision Requested',
-  approved_complete: 'Approved ✓',
-};
-
 export default function TopBar() {
   const {
-    project, activeRole, setActiveRole, setProjectTitle, setSourceUrl, setEditedUrl,
-    exportProject, importProject, setWorkflowState, addAuditEntry, setProject,
+    project, activeRole, setActiveRole, setProjectTitle,
+    exportProject, importProject,
   } = useProjectStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -54,14 +52,10 @@ export default function TopBar() {
     e.target.value = '';
   };
 
-  const handleSendToEditor = () => {
-    setWorkflowState('sent_to_editor');
-    addAuditEntry({ role: 'reviewer', action: 'sent_to_editor' });
-    toast.success('Project marked as sent to editor');
-  };
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleExport();
@@ -80,16 +74,6 @@ export default function TopBar() {
         onChange={(e) => setProjectTitle(e.target.value)}
         className="bg-transparent border-none text-base font-semibold w-48 h-8 px-1 focus-visible:ring-1"
       />
-
-      {/* State badge */}
-      <span className="px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium bg-orange-subtle text-primary">
-        {STATE_LABELS[project.workflow_state]}
-      </span>
-
-      {/* Round */}
-      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-        Round {project.review_round}
-      </span>
 
       <div className="flex-1" />
 
@@ -120,16 +104,6 @@ export default function TopBar() {
         <Button variant="ghost" size="icon" onClick={handleExport} title="Export .ehp">
           <Download className="w-4 h-4" />
         </Button>
-        {activeRole === 'reviewer' && project.workflow_state === 'draft' && (
-          <Button size="sm" onClick={handleSendToEditor} className="gap-1.5">
-            <Send className="w-3.5 h-3.5" /> Send to Editor
-          </Button>
-        )}
-        {activeRole === 'editor' && project.workflow_state === 'editor_in_progress' && (
-          <Button size="sm" onClick={() => { setWorkflowState('approved_complete'); addAuditEntry({ role: 'editor', action: 'edit_completed' }); toast.success('Edit marked as complete'); }} className="gap-1.5">
-            <Check className="w-3.5 h-3.5" /> Mark Complete
-          </Button>
-        )}
       </div>
     </div>
   );

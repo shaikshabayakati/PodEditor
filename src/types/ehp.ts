@@ -43,6 +43,12 @@ export interface AuditEntry {
   entry_id?: string;
 }
 
+export interface Tab {
+  id: string;
+  name: string;
+  instruction_ids: string[];
+}
+
 export interface EHPProject {
   schema_version: string;
   project_type: string;
@@ -59,6 +65,8 @@ export interface EHPProject {
   video_duration?: number;
   sections: string[];
   instructions: Instruction[];
+  tabs: Tab[];
+  active_tab_id: string;
   dictionary: string[];
   audit_log: AuditEntry[];
 }
@@ -111,6 +119,7 @@ export function parseTime(str: string): number | null {
 }
 
 export function createEmptyProject(): EHPProject {
+  const defaultTabId = crypto.randomUUID();
   return {
     schema_version: '1.0.0',
     project_type: 'edit_handoff',
@@ -122,6 +131,8 @@ export function createEmptyProject(): EHPProject {
     source_youtube_url: '',
     sections: [],
     instructions: [],
+    tabs: [{ id: defaultTabId, name: 'Main', instruction_ids: [] }],
+    active_tab_id: defaultTabId,
     dictionary: [
       'Remove repetition', 'Tighten this section', 'Add b-roll',
       'Insert graph link', 'Speed up', 'Add transition',
