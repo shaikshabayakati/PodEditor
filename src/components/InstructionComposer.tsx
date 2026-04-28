@@ -112,7 +112,14 @@ export default function InstructionComposer({
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      (e.target as HTMLElement).blur();
+      if (e.ctrlKey || e.metaKey) {
+        if (canSubmit()) {
+          e.preventDefault();
+          handleSubmit();
+        }
+      } else {
+        (e.target as HTMLElement).blur();
+      }
     }
   };
 
