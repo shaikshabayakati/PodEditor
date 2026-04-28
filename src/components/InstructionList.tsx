@@ -146,12 +146,12 @@ export default function InstructionList() {
 
       {/* Shortcuts row */}
       <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-2 border-t border-border text-[10px] text-muted-foreground">
-        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">P</kbd> Mark</span>
-        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">S</kbd> Save The Note</span>
+        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">M</kbd> Mark</span>
+        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">S</kbd> Start time</span>
+        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">D</kbd> End time</span>
+        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">Enter</kbd> Save Note</span>
         <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">T</kbd> Type</span>
-        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">N</kbd> Notes</span>
         <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">Space</kbd> Play</span>
-        <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">Enter</kbd> Save A filed</span>
         <span><kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">←→</kbd> ±10s</span>
       </div>
     </div>

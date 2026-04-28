@@ -124,22 +124,46 @@ export default function InstructionComposer({
       
       // Global shortcuts (only if not typing)
       if (!isTyping) {
-        // I for In-point (Start Time)
-        if (event.key.toLowerCase() === 'i') {
+        // S for In-point (Start Time)
+        if (event.key.toLowerCase() === 's') {
           event.preventDefault();
           setStartTime(formatTime(Math.max(0, Math.floor(currentVideoTime))));
+          // Move cursor to text box automatically
+          requestAnimationFrame(() => {
+            inputRef.current?.focus();
+          });
           return;
         }
 
-        // O for Out-point (End Time)
-        if (event.key.toLowerCase() === 'o') {
+        // D for Out-point (End Time)
+        if (event.key.toLowerCase() === 'd') {
           event.preventDefault();
           setEndTime(formatTime(Math.max(0, Math.floor(currentVideoTime))));
           return;
         }
 
-        // T or Q for Type/Section selection
-        if (event.key.toLowerCase() === 't' || event.key.toLowerCase() === 'q') {
+        // M for General Marker
+        if (event.key.toLowerCase() === 'm') {
+          event.preventDefault();
+          const markerTime = Math.max(0, Math.floor(currentVideoTime));
+          const instruction: Instruction = {
+            id: crypto.randomUUID(),
+            type: 'note',
+            start_time: markerTime,
+            input_text: 'general marker',
+            section: selectedSection,
+            execution_status: 'todo',
+            review_status: 'not_reviewed',
+            round: project.review_round,
+            created_at: new Date().toISOString(),
+          };
+          addInstruction(instruction);
+          addAuditEntry({ role: 'reviewer', action: 'instruction_added', entry_id: instruction.id });
+          return;
+        }
+
+        // T for Type/Section selection
+        if (event.key.toLowerCase() === 't') {
           event.preventDefault();
           setTypeOpen(true);
           return;
@@ -192,7 +216,7 @@ export default function InstructionComposer({
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Start (I)"
+            placeholder="Start (S)"
             className="bg-surface border-border font-mono text-sm h-10 w-full"
           />
         </div>
@@ -201,7 +225,7 @@ export default function InstructionComposer({
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="End (O)"
+            placeholder="End (D)"
             className="bg-surface border-border font-mono text-sm h-10 w-full"
           />
         </div>
@@ -215,13 +239,13 @@ export default function InstructionComposer({
                 <span className="text-[10px] text-muted-foreground leading-none mb-0.5 uppercase tracking-wider">Type</span>
                 <div className="flex items-center gap-1 w-full">
                   <span className="truncate flex-1 text-left">{getTypeLabel(type)}</span>
-                  <span className="text-[10px] text-muted-foreground opacity-50 flex-shrink-0">Q</span>
+                  <span className="text-[10px] text-muted-foreground opacity-50 flex-shrink-0">T</span>
                 </div>
                 </button>
                 </PopoverTrigger>
                 <PopoverContent className="p-0 w-64" align="end">
                 <Command>
-                <CommandInput placeholder="Search type or section... (Q)" />
+                <CommandInput placeholder="Search type or section... (T)" />
 
                 <CommandList>
                   <CommandEmpty>No results found.</CommandEmpty>
