@@ -26,8 +26,6 @@ interface InstructionComposerProps {
   duration?: number;
   playbackRate?: number;
   onPlaybackRateChange?: (rate: number) => void;
-  showSettings: boolean;
-  setShowSettings: (show: boolean) => void;
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -44,8 +42,6 @@ export default function InstructionComposer({
   duration = 0, 
   playbackRate = 1, 
   onPlaybackRateChange,
-  showSettings,
-  setShowSettings
 }: InstructionComposerProps) {
   const { addInstruction, project, addAuditEntry, activeRole, currentVideoTime } = useProjectStore();
   const [startTime, setStartTime] = useState('');
@@ -212,8 +208,6 @@ export default function InstructionComposer({
         duration={duration}
         playbackRate={playbackRate}
         onPlaybackRateChange={onPlaybackRateChange || (() => {})}
-        showSettings={showSettings}
-        setShowSettings={setShowSettings}
       />
 
       {/* Start, End, Type - all in one row */}

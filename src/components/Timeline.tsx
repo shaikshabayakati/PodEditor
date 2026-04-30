@@ -8,8 +8,6 @@ interface TimelineProps {
   duration: number;
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
-  showSettings: boolean;
-  setShowSettings: (show: boolean) => void;
 }
 
 export default function Timeline({
@@ -17,8 +15,6 @@ export default function Timeline({
   duration,
   playbackRate,
   onPlaybackRateChange,
-  showSettings,
-  setShowSettings,
 }: TimelineProps) {
   const { seekVideoTo } = useProjectStore();
 
@@ -28,32 +24,9 @@ export default function Timeline({
         <span>{formatTime(Math.floor(currentTime))}</span>
         <div className="flex items-center gap-1">
           <span className="text-primary font-medium">{playbackRate}x</span>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-0.5 hover:bg-accent rounded"
-          >
-            <Settings className="w-3 h-3" />
-          </button>
         </div>
         <span>{formatTime(Math.floor(duration))}</span>
       </div>
-      {showSettings && (
-        <div className="mb-1 flex gap-1">
-          {[0.5, 1, 1.5, 2].map((rate) => (
-            <button
-              key={rate}
-              onClick={() => onPlaybackRateChange?.(rate)}
-              className={`px-1.5 py-0.5 text-[10px] rounded ${
-                playbackRate === rate
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-accent hover:bg-accent/80'
-              }`}
-            >
-              {rate}x
-            </button>
-          ))}
-        </div>
-      )}
       <input
         type="range"
         min={0}

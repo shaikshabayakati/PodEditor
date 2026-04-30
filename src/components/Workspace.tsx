@@ -8,7 +8,6 @@ import Timeline from './Timeline';
 
 export default function Workspace() {
   const { project, activeRole, currentVideoTime, videoPlaybackRate, setVideoPlaybackRate } = useProjectStore();
-  const [showSettings, setShowSettings] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(55);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
@@ -64,8 +63,6 @@ export default function Workspace() {
                 duration={videoDuration}
                 playbackRate={videoPlaybackRate}
                 onPlaybackRateChange={setVideoPlaybackRate}
-                showSettings={showSettings}
-                setShowSettings={setShowSettings}
               />
             )}
             {isEditor && (
@@ -74,8 +71,6 @@ export default function Workspace() {
                 duration={videoDuration}
                 playbackRate={videoPlaybackRate}
                 onPlaybackRateChange={setVideoPlaybackRate}
-                showSettings={showSettings}
-                setShowSettings={setShowSettings}
               />
             )}
           </div>

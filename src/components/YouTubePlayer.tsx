@@ -116,49 +116,69 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
     loadYouTubeIframeApi().then(() => {
       if (cancelled || !playerHostRef.current || !window.YT?.Player) return;
 
-      playerRef.current = new window.YT.Player(playerHostRef.current, {
-        videoId,
-        playerVars: {
-          rel: 0,
-          modestbranding: 1,
-          playsinline: 1,
-          enablejsapi: 1,
-          controls: 0,
-          fs: 0,
-          iv_load_policy: 3,
-          showinfo: 0,
-        },
-        events: {
-          onReady: () => {
-            const tryPlay = () => {
-              if (playerRef.current) {
-                playerRef.current.setVolume(100);
-                playerRef.current.unMute();
-                playerRef.current.playVideo();
-              }
-            };
-            tryPlay();
-            setTimeout(tryPlay, 500);
-            setTimeout(tryPlay, 1500);
-            timer = setInterval(() => {
-              const current = playerRef.current?.getCurrentTime() ?? 0;
-              setCurrentVideoTime(current);
+      try {
+        playerRef.current = new window.YT.Player(playerHostRef.current, {
+          videoId,
+          playerVars: {
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            enablejsapi: 1,
+            controls: 0, // Set to 0 to completely hide the native UI
+            disablekb: 1, // Disable native keyboard controls
+            fs: 0,
+            iv_load_policy: 3,
+            origin: window.location.origin,
+          },
+          events: {
+            onReady: () => {
+              const tryPlay = () => {
+                if (playerRef.current) {
+                  try {
+                    playerRef.current.setVolume(100);
+                    playerRef.current.unMute();
+                    playerRef.current.playVideo();
+                  } catch (e) {
+                    console.error('Error playing video:', e);
+                  }
+                }
+              };
+              tryPlay();
+              setTimeout(tryPlay, 500);
+              setTimeout(tryPlay, 1500);
+              timer = setInterval(() => {
+                try {
+                  const current = playerRef.current?.getCurrentTime() ?? 0;
+                  setCurrentVideoTime(current);
 
-              const duration = playerRef.current?.getDuration() ?? 0;
-              if (duration > 0 && Math.abs(duration - knownDurationRef.current) > 0.25) {
-                knownDurationRef.current = duration;
-                setVideoDuration(duration);
+                  const duration = playerRef.current?.getDuration() ?? 0;
+                  if (duration > 0 && Math.abs(duration - knownDurationRef.current) > 0.25) {
+                    knownDurationRef.current = duration;
+                    setVideoDuration(duration);
+                  }
+                } catch (e) {
+                  console.error('Error updating player state:', e);
+                }
+              }, 200);
+            },
+            onStateChange: (event: { data: number }) => {
+              if (event.data === window.YT?.PlayerState?.PLAYING && playerRef.current) {
+                try {
+                  playerRef.current.setVolume(100);
+                  playerRef.current.unMute();
+                } catch (e) {
+                  console.error('Error setting volume:', e);
+                }
               }
-            }, 200);
+            },
+            onError: (event: { data: number }) => {
+              console.error('YouTube Player Error:', event.data);
+            },
           },
-          onStateChange: (event: { data: number }) => {
-            if (event.data === window.YT?.PlayerState?.PLAYING && playerRef.current) {
-              playerRef.current.setVolume(100);
-              playerRef.current.unMute();
-            }
-          },
-        },
-      });
+        });
+      } catch (e) {
+        console.error('Failed to initialize YouTube player:', e);
+      }
     });
 
     return () => {
@@ -270,10 +290,11 @@ export default function YouTubePlayer({ url, className = '' }: YouTubePlayerProp
 
   return (
     <div className={`relative overflow-hidden rounded-lg border border-border group flex ${className}`}>
-      <div ref={playerHostRef} className="absolute inset-0 h-full w-full" />
+      <div ref={playerHostRef} className="absolute inset-0 h-full w-full pointer-events-none" />
       <div 
-        className="absolute top-0 left-0 right-0 bottom-[90px] z-10 cursor-pointer"
-        onClick={() => {
+        className="absolute inset-0 z-10 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
           if (playerRef.current) {
             const state = playerRef.current.getPlayerState();
             if (state === 1 || state === 3) {
