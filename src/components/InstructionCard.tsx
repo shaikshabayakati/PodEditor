@@ -202,7 +202,7 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             >{chapterLabel}</p>
             <span 
               className="text-xs font-mono text-muted-foreground cursor-pointer hover:text-primary hover:underline"
-              onClick={() => isReviewer && setIsEditingChapter(true)}
+              onClick={(e) => jumpToTime(e, inst.start_time)}
             >[{formatTime(inst.start_time)}]</span>
             {isReviewer && (
               <button
@@ -282,7 +282,7 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             >{chapterLabel}</p>
             <span 
               className="text-xs font-mono text-muted-foreground cursor-pointer hover:text-primary hover:underline"
-              onClick={() => isReviewer && setIsEditingChapter(true)}
+              onClick={(e) => jumpToTime(e, inst.start_time)}
             >[{formatTime(inst.start_time)}]</span>
             {isReviewer && (
               <button
@@ -344,16 +344,9 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
               <Clock className="w-3 h-3" />
               <button
-                onClick={(e) => {
-                  if (isReviewer) {
-                    setExpanded(true);
-                    beginReviewerEdit();
-                  } else {
-                    jumpToTime(e, inst.start_time);
-                  }
-                }}
-                className={`hover:text-primary transition-colors ${isReviewer ? 'cursor-pointer' : ''}`}
-                title={isReviewer ? "Click to edit" : "Jump to timestamp"}
+                onClick={(e) => jumpToTime(e, inst.start_time)}
+                className="hover:text-primary transition-colors"
+                title="Jump to timestamp"
               >
                 {formatTime(inst.start_time)}
               </button>
@@ -361,16 +354,9 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
                 <>
                   <ArrowRight className="w-3 h-3" />
                   <button
-                    onClick={(e) => {
-                      if (isReviewer) {
-                        setExpanded(true);
-                        beginReviewerEdit();
-                      } else {
-                        jumpToTime(e, inst.end_time!);
-                      }
-                    }}
-                    className={`hover:text-primary transition-colors ${isReviewer ? 'cursor-pointer' : ''}`}
-                    title={isReviewer ? "Click to edit" : "Jump to timestamp"}
+                    onClick={(e) => jumpToTime(e, inst.end_time!)}
+                    className="hover:text-primary transition-colors"
+                    title="Jump to timestamp"
                   >
                     {formatTime(inst.end_time)}
                   </button>
@@ -378,16 +364,9 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
               )}
               {inst.destination_start_time != null && (
                 <button
-                  onClick={(e) => {
-                    if (isReviewer) {
-                      setExpanded(true);
-                      beginReviewerEdit();
-                    } else {
-                      jumpToTime(e, inst.destination_start_time!);
-                    }
-                  }}
-                  className={`text-info ml-1 hover:text-primary transition-colors ${isReviewer ? 'cursor-pointer' : ''}`}
-                  title={isReviewer ? "Click to edit" : "Jump to timestamp"}
+                  onClick={(e) => jumpToTime(e, inst.destination_start_time!)}
+                  className="text-info ml-1 hover:text-primary transition-colors"
+                  title="Jump to timestamp"
                 >
                   → {formatTime(inst.destination_start_time)}
                 </button>
