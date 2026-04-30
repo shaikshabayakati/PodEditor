@@ -130,9 +130,15 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
   const chapterLabel = inst.input_text.replace('[END]', '').trim() || 'Section';
   const [isEditingChapter, setIsEditingChapter] = useState(false);
   const [editChapterText, setEditChapterText] = useState(chapterLabel);
+  const [editChapterTime, setEditChapterTime] = useState(formatTime(inst.start_time));
 
   const saveChapterEdit = () => {
-    updateInstruction(inst.id, { input_text: editChapterText });
+    const parsedStart = parseTime(editChapterTime);
+    if (parsedStart == null) {
+      setEditError('Start time is invalid. Use mm:ss or hh:mm:ss.');
+      return;
+    }
+    updateInstruction(inst.id, { input_text: editChapterText, start_time: parsedStart });
     setIsEditingChapter(false);
   };
 
@@ -146,32 +152,44 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
         className="px-3 py-2 rounded-lg border border-primary/30 bg-primary/10"
       >
         {isEditingChapter && isReviewer ? (
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-primary text-primary-foreground">
-              Chapter
-            </span>
-            <Input
-              value={editChapterText}
-              onChange={(e) => setEditChapterText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveChapterEdit();
-                if (e.key === 'Escape') setIsEditingChapter(false);
-              }}
-              className="flex-1 h-7 text-sm"
-              autoFocus
-            />
-            <button
-              onClick={saveChapterEdit}
-              className="p-1 hover:bg-primary/20 rounded text-primary"
-            >
-              <Check className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => setIsEditingChapter(false)}
-              className="p-1 hover:bg-destructive/20 rounded text-destructive"
-            >
-              <X className="w-3 h-3" />
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-primary text-primary-foreground">
+                Chapter
+              </span>
+              <Input
+                value={editChapterText}
+                onChange={(e) => setEditChapterText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveChapterEdit();
+                  if (e.key === 'Escape') setIsEditingChapter(false);
+                }}
+                className="flex-1 h-7 text-sm"
+                autoFocus
+              />
+              <Input
+                value={editChapterTime}
+                onChange={(e) => setEditChapterTime(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveChapterEdit();
+                  if (e.key === 'Escape') setIsEditingChapter(false);
+                }}
+                className="w-20 h-7 text-sm font-mono"
+              />
+              <button
+                onClick={saveChapterEdit}
+                className="p-1 hover:bg-primary/20 rounded text-primary"
+              >
+                <Check className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => setIsEditingChapter(false)}
+                className="p-1 hover:bg-destructive/20 rounded text-destructive"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            {editError && <p className="text-[10px] text-warning px-1">{editError}</p>}
           </div>
         ) : (
           <div className="flex items-center gap-2">
@@ -182,7 +200,10 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
               className="text-sm font-medium text-foreground truncate cursor-pointer hover:underline"
               onClick={() => isReviewer && setIsEditingChapter(true)}
             >{chapterLabel}</p>
-            <span className="text-xs font-mono text-muted-foreground">[{formatTime(inst.start_time)}]</span>
+            <span 
+              className="text-xs font-mono text-muted-foreground cursor-pointer hover:text-primary hover:underline"
+              onClick={() => isReviewer && setIsEditingChapter(true)}
+            >[{formatTime(inst.start_time)}]</span>
             {isReviewer && (
               <button
                 onClick={(e) => {
@@ -211,32 +232,44 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
         className="px-3 py-2 rounded-lg border border-border bg-surface"
       >
         {isEditingChapter && isReviewer ? (
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-muted text-muted-foreground">
-              Chapter End
-            </span>
-            <Input
-              value={editChapterText}
-              onChange={(e) => setEditChapterText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveChapterEdit();
-                if (e.key === 'Escape') setIsEditingChapter(false);
-              }}
-              className="flex-1 h-7 text-sm"
-              autoFocus
-            />
-            <button
-              onClick={saveChapterEdit}
-              className="p-1 hover:bg-primary/20 rounded text-primary"
-            >
-              <Check className="w-3 h-3" />
-            </button>
-            <button
-              onClick={() => setIsEditingChapter(false)}
-              className="p-1 hover:bg-destructive/20 rounded text-destructive"
-            >
-              <X className="w-3 h-3" />
-            </button>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-semibold bg-muted text-muted-foreground">
+                Chapter End
+              </span>
+              <Input
+                value={editChapterText}
+                onChange={(e) => setEditChapterText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveChapterEdit();
+                  if (e.key === 'Escape') setIsEditingChapter(false);
+                }}
+                className="flex-1 h-7 text-sm"
+                autoFocus
+              />
+              <Input
+                value={editChapterTime}
+                onChange={(e) => setEditChapterTime(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveChapterEdit();
+                  if (e.key === 'Escape') setIsEditingChapter(false);
+                }}
+                className="w-20 h-7 text-sm font-mono"
+              />
+              <button
+                onClick={saveChapterEdit}
+                className="p-1 hover:bg-primary/20 rounded text-primary"
+              >
+                <Check className="w-3 h-3" />
+              </button>
+              <button
+                onClick={() => setIsEditingChapter(false)}
+                className="p-1 hover:bg-destructive/20 rounded text-destructive"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+            {editError && <p className="text-[10px] text-warning px-1">{editError}</p>}
           </div>
         ) : (
           <div className="flex items-center gap-2 text-muted-foreground">
@@ -247,7 +280,10 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
               className="text-sm truncate cursor-pointer hover:underline"
               onClick={() => isReviewer && setIsEditingChapter(true)}
             >{chapterLabel}</p>
-            <span className="text-xs font-mono text-muted-foreground">[{formatTime(inst.start_time)}]</span>
+            <span 
+              className="text-xs font-mono text-muted-foreground cursor-pointer hover:text-primary hover:underline"
+              onClick={() => isReviewer && setIsEditingChapter(true)}
+            >[{formatTime(inst.start_time)}]</span>
             {isReviewer && (
               <button
                 onClick={(e) => {
@@ -308,9 +344,16 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
               <Clock className="w-3 h-3" />
               <button
-                onClick={(e) => jumpToTime(e, inst.start_time)}
-                className="hover:text-primary transition-colors"
-                title="Jump to timestamp"
+                onClick={(e) => {
+                  if (isReviewer) {
+                    setExpanded(true);
+                    beginReviewerEdit();
+                  } else {
+                    jumpToTime(e, inst.start_time);
+                  }
+                }}
+                className={`hover:text-primary transition-colors ${isReviewer ? 'cursor-pointer' : ''}`}
+                title={isReviewer ? "Click to edit" : "Jump to timestamp"}
               >
                 {formatTime(inst.start_time)}
               </button>
@@ -318,9 +361,16 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
                 <>
                   <ArrowRight className="w-3 h-3" />
                   <button
-                    onClick={(e) => jumpToTime(e, inst.end_time!)}
-                    className="hover:text-primary transition-colors"
-                    title="Jump to timestamp"
+                    onClick={(e) => {
+                      if (isReviewer) {
+                        setExpanded(true);
+                        beginReviewerEdit();
+                      } else {
+                        jumpToTime(e, inst.end_time!);
+                      }
+                    }}
+                    className={`hover:text-primary transition-colors ${isReviewer ? 'cursor-pointer' : ''}`}
+                    title={isReviewer ? "Click to edit" : "Jump to timestamp"}
                   >
                     {formatTime(inst.end_time)}
                   </button>
@@ -328,16 +378,23 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
               )}
               {inst.destination_start_time != null && (
                 <button
-                  onClick={(e) => jumpToTime(e, inst.destination_start_time!)}
-                  className="text-info ml-1 hover:text-primary transition-colors"
-                  title="Jump to timestamp"
+                  onClick={(e) => {
+                    if (isReviewer) {
+                      setExpanded(true);
+                      beginReviewerEdit();
+                    } else {
+                      jumpToTime(e, inst.destination_start_time!);
+                    }
+                  }}
+                  className={`text-info ml-1 hover:text-primary transition-colors ${isReviewer ? 'cursor-pointer' : ''}`}
+                  title={isReviewer ? "Click to edit" : "Jump to timestamp"}
                 >
                   → {formatTime(inst.destination_start_time)}
                 </button>
               )}
             </div>
             {inst.input_text && (
-              <p className="text-sm text-foreground mt-1.5 truncate">{inst.input_text}</p>
+              <p className="text-sm text-foreground mt-1.5 line-clamp-2 break-words">{inst.input_text}</p>
             )}
           </div>
         </div>
@@ -352,6 +409,11 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 pt-0 space-y-2 border-t border-border">
+              {inst.input_text && (
+                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words border-b border-border/50 pb-2">
+                  {inst.input_text}
+                </div>
+              )}
               {/* Editor note */}
               {isEditor && (
                 <div className="mt-2">
@@ -427,19 +489,19 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
                         <label className="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">
                           Notes / Directions
                         </label>
-                        <Input
+                        <textarea
                           data-text-edit
                           value={editInputText}
                           onChange={(e) => setEditInputText(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                               e.preventDefault();
                               e.stopPropagation();
                               saveReviewerEdit();
                             }
                           }}
                           placeholder="Add or update directions..."
-                          className="bg-background border-border text-sm h-8"
+                          className="w-full bg-background border border-border rounded-md text-sm p-2 min-h-[80px] focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
 

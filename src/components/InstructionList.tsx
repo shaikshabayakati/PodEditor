@@ -145,7 +145,7 @@ export default function InstructionList() {
       </div>
 
       {/* Shortcuts row */}
-      <div className="flex flex-wrap gap-x-3 gap-y-2 px-3 py-3 border-t border-border text-[10px] text-muted-foreground bg-card/50">
+      <div className="flex flex-wrap gap-x-3 gap-y-2 px-3 py-3 border-t border-border text-[10px] text-muted-foreground bg-card/50 flex-shrink-0">
         <div className="flex gap-1.5 items-center">
           <kbd className="px-1 py-0.5 bg-surface border border-border rounded font-mono">S</kbd> Start
         </div>
