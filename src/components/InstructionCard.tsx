@@ -388,11 +388,6 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 pt-0 space-y-2 border-t border-border">
-              {inst.input_text && (
-                <div className="mt-2 text-sm text-foreground whitespace-pre-wrap break-words border-b border-border/50 pb-2">
-                  {inst.input_text}
-                </div>
-              )}
               {/* Editor note */}
               {isEditor && (
                 <div className="mt-2">

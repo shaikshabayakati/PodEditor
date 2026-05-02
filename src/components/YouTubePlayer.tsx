@@ -27,6 +27,8 @@ interface YTPlayerNamespace {
       playerVars?: Record<string, number>;
       events?: {
         onReady?: () => void;
+        onStateChange?: (event: { data: number }) => void;
+        onError?: (event: { data: number }) => void;
       };
     }
   ) => YTPlayerInstance;

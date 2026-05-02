@@ -111,6 +111,7 @@ export default function InstructionComposer({
       if (e.ctrlKey || e.metaKey) {
         if (canSubmit()) {
           e.preventDefault();
+          e.stopPropagation();
           handleSubmit();
         }
       } else {
