@@ -18,12 +18,26 @@ function normalizeImportedProject(value: unknown): EHPProject | null {
 
   if (!schemaVersion || !projectId) return null;
 
+  const instructions = Array.isArray(value.instructions)
+    ? (value.instructions as Instruction[])
+    : fallback.instructions;
+
   const tabs: Tab[] = Array.isArray(value.tabs)
     ? (value.tabs as Tab[]).filter((t): t is Tab => isRecord(t) && typeof t.id === 'string' && typeof t.name === 'string')
     : fallback.tabs;
+  
+  // If we imported instructions but no tabs (or instruction_ids in tabs),
+  // make sure the instructions are linked to the active tab.
   const activeTabId = typeof value.active_tab_id === 'string' && tabs.some(t => t.id === value.active_tab_id)
     ? value.active_tab_id
     : tabs[0]?.id ?? fallback.active_tab_id;
+
+  const finalTabs = tabs.map(t => {
+    if (t.id === activeTabId && instructions.length > 0 && t.instruction_ids.length === 0) {
+      return { ...t, instruction_ids: instructions.map(i => i.id) };
+    }
+    return t;
+  });
 
   return {
     ...fallback,
@@ -62,10 +76,8 @@ function normalizeImportedProject(value: unknown): EHPProject | null {
     sections: Array.isArray(value.sections)
       ? value.sections.filter((section): section is string => typeof section === 'string')
       : fallback.sections,
-    instructions: Array.isArray(value.instructions)
-      ? (value.instructions as Instruction[])
-      : fallback.instructions,
-    tabs,
+    instructions,
+    tabs: finalTabs,
     active_tab_id: activeTabId,
     dictionary: Array.isArray(value.dictionary)
       ? value.dictionary.filter((item): item is string => typeof item === 'string')
