@@ -119,6 +119,7 @@ interface ProjectStore {
   setActiveTab: (id: string) => void;
   addInstructionToTab: (instructionId: string, tabId?: string) => void;
   removeInstructionFromTab: (instructionId: string, tabId?: string) => void;
+  setTabInstructions: (instructionIds: string[], tabId?: string) => void;
   getActiveTabInstructions: () => Instruction[];
   setWorkflowState: (state: WorkflowState) => void;
   addAuditEntry: (entry: Omit<AuditEntry, 'timestamp'>) => void;
@@ -236,6 +237,18 @@ export const useProjectStore = create<ProjectStore>()(
                 t.id === targetTabId
                   ? { ...t, instruction_ids: t.instruction_ids.filter((id) => id !== instructionId) }
                   : t
+              ),
+            },
+          };
+        }),
+      setTabInstructions: (instructionIds, tabId) =>
+        set((s) => {
+          const targetTabId = tabId ?? s.project.active_tab_id;
+          return {
+            project: {
+              ...s.project,
+              tabs: s.project.tabs.map((t) =>
+                t.id === targetTabId ? { ...t, instruction_ids: instructionIds } : t
               ),
             },
           };

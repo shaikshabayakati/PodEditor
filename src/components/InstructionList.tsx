@@ -1,12 +1,13 @@
 import { useProjectStore } from '@/store/projectStore';
 import InstructionCard from './InstructionCard';
 import { useState, useRef } from 'react';
-import { Filter, List, Plus, X, Pencil } from 'lucide-react';
+import { Filter, List, Plus, X, Pencil, GripVertical } from 'lucide-react';
+import { Reorder } from 'framer-motion';
 import type { InstructionType, ExecutionStatus } from '@/types/ehp';
 import { INSTRUCTION_LABELS } from '@/types/ehp';
 
 export default function InstructionList() {
-  const { project, getActiveTabInstructions, addTab, renameTab, removeTab, setActiveTab } = useProjectStore();
+  const { project, getActiveTabInstructions, addTab, renameTab, removeTab, setActiveTab, setTabInstructions } = useProjectStore();
   const [filterType, setFilterType] = useState<InstructionType | 'all'>('all');
   const [filterStatus, setFilterStatus] = useState<ExecutionStatus | 'all'>('all');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -45,6 +46,20 @@ export default function InstructionList() {
       removeTab(tabId);
     }
   };
+
+  const handleReorder = (newOrderedInstructions: typeof tabInstructions) => {
+    // We only want to update the store if there's no filter active,
+    // or if we have a way to map the reordered filtered list back to the full list.
+    // For simplicity, we'll allow reordering only when no filters are active,
+    // or we'll update only the subset if we want to be fancy.
+    // But usually, drag-and-drop works best on the actual underlying list.
+    
+    if (filterType === 'all' && filterStatus === 'all') {
+      setTabInstructions(newOrderedInstructions.map(i => i.id));
+    }
+  };
+
+  const isFiltered = filterType !== 'all' || filterStatus !== 'all';
 
   return (
     <div className="flex flex-col h-full">
@@ -132,15 +147,38 @@ export default function InstructionList() {
         </span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2">
-        {filtered.length === 0 ? (
+      <div className="flex-1 overflow-y-auto p-3">
+        {tabInstructions.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
-            {tabInstructions.length === 0 ? 'No instructions yet' : 'No matching instructions'}
+            No instructions yet
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex items-center justify-center h-32 text-muted-foreground text-sm">
+            No matching instructions
           </div>
         ) : (
-          filtered.map((inst) => (
-            <InstructionCard key={inst.id} instruction={inst} />
-          ))
+          <Reorder.Group
+            axis="y"
+            values={isFiltered ? filtered : tabInstructions}
+            onReorder={isFiltered ? () => {} : handleReorder}
+            className="space-y-2"
+          >
+            {filtered.map((inst) => (
+              <Reorder.Item
+                key={inst.id}
+                value={inst}
+                dragListener={!isFiltered}
+                className="relative"
+              >
+                {!isFiltered && (
+                  <div className="absolute left-[-12px] top-1/2 -translate-y-1/2 opacity-0 hover:opacity-50 cursor-grab active:cursor-grabbing p-1">
+                    <GripVertical className="w-3 h-3" />
+                  </div>
+                )}
+                <InstructionCard instruction={inst} />
+              </Reorder.Item>
+            ))}
+          </Reorder.Group>
         )}
       </div>
 

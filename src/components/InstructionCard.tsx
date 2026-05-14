@@ -47,6 +47,19 @@ export default function InstructionCard({ instruction: inst }: InstructionCardPr
   const isEditor = activeRole === 'editor';
   const isReviewer = activeRole === 'reviewer';
 
+  const shouldPreventDrag = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent drag when interacting with buttons, inputs, or expanded content
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('.expanded-content')
+    ) {
+      e.stopPropagation();
+    }
+  };
+
   const cycleStatus = () => {
     if (!isEditor) return;
     const order: ExecutionStatus[] = ['todo', 'in_progress', 'done', 'blocked'];
@@ -144,12 +157,10 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
 
   if (isChapterStart) {
     return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, x: -20 }}
+      <div
         className="px-3 py-2 rounded-lg border border-primary/30 bg-primary/10"
+        onMouseDown={shouldPreventDrag}
+        onTouchStart={shouldPreventDrag}
       >
         {isEditingChapter && isReviewer ? (
           <div className="flex flex-col gap-2">
@@ -218,18 +229,16 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             )}
           </div>
         )}
-      </motion.div>
+      </div>
     );
   }
 
   if (isChapterEnd) {
     return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, x: -20 }}
+      <div
         className="px-3 py-2 rounded-lg border border-border bg-surface"
+        onMouseDown={shouldPreventDrag}
+        onTouchStart={shouldPreventDrag}
       >
         {isEditingChapter && isReviewer ? (
           <div className="flex flex-col gap-2">
@@ -298,17 +307,15 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
             )}
           </div>
         )}
-      </motion.div>
+      </div>
     );
   }
 
   return (
-        <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, x: -20 }}
+    <div
       className={`bg-card border border-border rounded-lg overflow-hidden border-l-2 ${borderColor}`}
+      onMouseDown={shouldPreventDrag}
+      onTouchStart={shouldPreventDrag}
     >
       <div
         className="p-3 cursor-pointer hover:bg-surface-hover transition-colors"
@@ -539,6 +546,6 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }
