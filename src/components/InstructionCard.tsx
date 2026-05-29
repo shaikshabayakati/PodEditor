@@ -1,9 +1,9 @@
+import React, { useState } from 'react';
 import { useProjectStore } from '@/store/projectStore';
 import type { Instruction, ExecutionStatus, ReviewStatus } from '@/types/ehp';
 import { INSTRUCTION_LABELS, formatTime, isRangeBased, parseTime } from '@/types/ehp';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Clock, ArrowRight, Flag, MessageSquare, Check, X, AlertTriangle, Pencil, CheckCircle2 } from 'lucide-react';
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 
 const STATUS_COLORS: Record<ExecutionStatus, string> = {
@@ -26,6 +26,52 @@ const TYPE_COLORS: Record<string, string> = {
   note: 'border-l-muted-foreground',
   chapter: 'border-l-primary',
 };
+
+const URL_SPLIT_REGEX = /((?:https?:\/\/|www\.)[^\s]+)/gi;
+const URL_PREFIX_REGEX = /^(https?:\/\/|www\.)/i;
+
+function renderLinkifiedText(text: string) {
+  const lines = text.split('\n');
+  return lines.map((line, lineIndex) => {
+    const parts = line.split(URL_SPLIT_REGEX);
+    return (
+      <React.Fragment key={`line-${lineIndex}`}>
+        {parts.map((part, index) => {
+          if (!part) return null;
+
+          if (!URL_PREFIX_REGEX.test(part)) {
+            return <span key={`text-${index}`}>{part}</span>;
+          }
+
+          let url = part;
+          let trailing = '';
+          while (/[)\],.;!?]$/.test(url)) {
+            trailing = url.slice(-1) + trailing;
+            url = url.slice(0, -1);
+          }
+
+          const href = url.startsWith('http') ? url : `https://${url}`;
+
+          return (
+            <span key={`link-${index}`}>
+              <a
+                href={href}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline underline-offset-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {url}
+              </a>
+              {trailing}
+            </span>
+          );
+        })}
+        {lineIndex < lines.length - 1 && <br />}
+      </React.Fragment>
+    );
+  });
+}
 
 interface InstructionCardProps {
   instruction: Instruction;
@@ -380,7 +426,9 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
               )}
             </div>
             {inst.input_text && (
-              <p className="text-sm text-foreground mt-1.5 line-clamp-2 break-words">{inst.input_text}</p>
+              <p className="text-sm text-foreground mt-1.5 line-clamp-2 break-words">
+                {renderLinkifiedText(inst.input_text)}
+              </p>
             )}
           </div>
         </div>
@@ -537,9 +585,10 @@ const isChapterStart = inst.type === 'chapter' && !inst.input_text.includes('[EN
                 </>
               )}
 
-{inst.editor_note && !isEditor && (
+              {inst.editor_note && !isEditor && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  <span className="text-[10px] uppercase tracking-wider">Editor: </span>{inst.editor_note}
+                  <span className="text-[10px] uppercase tracking-wider">Editor: </span>
+                  {renderLinkifiedText(inst.editor_note)}
                 </p>
               )}
             </div>
